@@ -1,0 +1,11 @@
+[package]
+name = "reductor"
+version = "0.0.1-alpha.1"
+edition = "2018"
+authors = ["Yotam Ofek <yotam.ofek@gmail.com>"]
+description = "Generic abstractions for combining and nesting reduction patterns for iterables."
+repository = "https://github.com/yotamofek/reductor/"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+num-traits = "0.2"
