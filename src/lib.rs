@@ -50,16 +50,16 @@
 //! reducing an iterator producing a single value by a pair of [`Reductor`]s, in tandem.
 //!
 //! ```rust
-//! use reductor::{Reduce, ReductorPair, Sum, Max};
+//! use reductor::{Reduce, ReductorPair, Min, Max};
 //!
 //! let iter = 0..10;
-//! let ReductorPair(Max(max), Sum(sum)) = iter
+//! let ReductorPair(Min(min), Max(max)) = iter
 //!     .clone()
-//!     .map(|x| x)
-//!     .reduce_with::<Option<ReductorPair<Max<usize>, Sum<usize>>>>().unwrap();
+//!     .reduce_with::<Option<ReductorPair<Min<usize>, Max<usize>>>>()
+//!     .unwrap();
 //!
-//! assert_eq!(sum, iter.clone().sum());
-//! assert_eq!(max, iter.clone().max().unwrap());
+//! assert_eq!(min, iter.clone().next().unwrap());
+//! assert_eq!(max, iter.last().unwrap());
 //! ```
 //!
 //! These constructs allow building very complex iterator loops that compose
