@@ -10,4 +10,4 @@ mod product;
 pub use self::product::Product;
 
 mod min_max;
-pub use self::min_max::{Max, Min};
+pub use self::min_max::{Max, MaxF32, MaxF64, Min, MinF32, MinF64};

@@ -19,10 +19,10 @@
 //! assert_eq!(product, iter.clone().product());
 //! assert_eq!(count, iter.clone().count());
 //!
-//! let Max(max) = iter.clone().reduce_with::<Max<Option<u32>>>();
-//! let Min(min) = iter.clone().reduce_with::<Min<Option<u32>>>();
-//! assert_eq!(max, Some(9));
-//! assert_eq!(min, Some(0));
+//! let Min(min) = iter.clone().reduce_with::<Option<Min<u32>>>().unwrap();
+//! let Max(max) = iter.clone().reduce_with::<Option<Max<u32>>>().unwrap();
+//! assert_eq!(min, iter.clone().next().unwrap());
+//! assert_eq!(max, iter.last().unwrap());
 //! ```
 //!
 //! Notice that unlike [`Sum`] and [`Product`], [`Min`] and [`Max`] won't reduce
