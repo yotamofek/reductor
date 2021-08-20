@@ -42,6 +42,7 @@ macro_rules! impl_min_max {
         }
 
         impl<T> Default for $type<Option<T>> {
+            #[inline]
             fn default() -> Self {
                 Self(None)
             }

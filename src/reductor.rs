@@ -7,15 +7,17 @@ impl<R, A> Reductor<A> for Option<R>
 where
     R: Reductor<A>,
 {
+    #[inline]
+    fn new(item: A) -> Self {
+        Some(<R as Reductor<A>>::new(item))
+    }
+
+    #[inline]
     fn reduce(acc: Self, item: A) -> Self {
         Some(match acc {
             Some(acc) => <R as Reductor<A>>::reduce(acc, item),
             None => <R as Reductor<A>>::new(item),
         })
-    }
-
-    fn new(item: A) -> Self {
-        Some(<R as Reductor<A>>::new(item))
     }
 }
 
@@ -25,17 +27,18 @@ where
     R2: Reductor<A2>,
 {
     #[inline]
-    fn reduce(acc: Self, (item1, item2): (A1, A2)) -> Self {
-        (
-            <R1 as Reductor<A1>>::reduce(acc.0, item1),
-            <R2 as Reductor<A2>>::reduce(acc.1, item2),
-        )
-    }
-
     fn new((item1, item2): (A1, A2)) -> Self {
         (
             <R1 as Reductor<A1>>::new(item1),
             <R2 as Reductor<A2>>::new(item2),
+        )
+    }
+
+    #[inline]
+    fn reduce(acc: Self, (item1, item2): (A1, A2)) -> Self {
+        (
+            <R1 as Reductor<A1>>::reduce(acc.0, item1),
+            <R2 as Reductor<A2>>::reduce(acc.1, item2),
         )
     }
 }
@@ -50,17 +53,18 @@ where
     R2: Reductor<A>,
 {
     #[inline]
-    fn reduce(acc: Self, item: A) -> Self {
-        Self(
-            <R1 as Reductor<A>>::reduce(acc.0, item.clone()),
-            <R2 as Reductor<A>>::reduce(acc.1, item),
-        )
-    }
-
     fn new(item: A) -> Self {
         Self(
             <R1 as Reductor<A>>::new(item.clone()),
             <R2 as Reductor<A>>::new(item),
+        )
+    }
+
+    #[inline]
+    fn reduce(acc: Self, item: A) -> Self {
+        Self(
+            <R1 as Reductor<A>>::reduce(acc.0, item.clone()),
+            <R2 as Reductor<A>>::reduce(acc.1, item),
         )
     }
 }

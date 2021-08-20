@@ -21,11 +21,12 @@ where
     T: iter::Product + From<A>,
 {
     #[inline]
-    fn reduce(acc: Self, elem: A) -> Self {
-        Self(once(acc.0).chain(once(elem.into())).product())
-    }
-
     fn new(item: A) -> Self {
         Self(item.into())
+    }
+
+    #[inline]
+    fn reduce(acc: Self, elem: A) -> Self {
+        Self(once(acc.0).chain(once(elem.into())).product())
     }
 }
