@@ -8,12 +8,6 @@ macro_rules! impl_min_max {
         #[derive(Debug, Clone, Copy)]
         pub struct $type<T>(pub T);
 
-        impl<T> From<T> for $type<T> {
-            fn from(t: T) -> Self {
-                Self(t)
-            }
-        }
-
         impl<T> Reductor<T> for $type<T>
         where
             T: cmp::Ord,
@@ -57,24 +51,3 @@ macro_rules! impl_min_max {
 
 impl_min_max!(Max, std::cmp::max);
 impl_min_max!(Min, std::cmp::min);
-
-// macro_rules! impl_min_max_tuple {
-//     ($type1:ident, $type2:ident, $cmp1:path, $cmp2:path) => {
-//         impl<T> Reductor<T> for Option<($type1<T>, $type2<T>)>
-//         where
-//             T: Ord + Clone,
-//         {
-//             fn reduce(acc: Self, item: T) -> Self {
-//                 Some(match acc {
-//                     Some(($type1(min), $type2(max))) => {
-//                         ($type1($cmp1(min, item.clone())), $type2($cmp2(max, item)))
-//                     }
-//                     None => ($type1(item.clone()), $type2(item)),
-//                 })
-//             }
-//         }
-//     };
-// }
-
-// impl_min_max_tuple!(Max, Min, std::cmp::max, std::cmp::min);
-// impl_min_max_tuple!(Min, Max, std::cmp::min, std::cmp::max);

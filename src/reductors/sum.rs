@@ -6,12 +6,6 @@ use crate::Reductor;
 #[derive(Debug, Clone, Copy)]
 pub struct Sum<T>(pub T);
 
-impl<T> From<T> for Sum<T> {
-    fn from(t: T) -> Self {
-        Self(t)
-    }
-}
-
 impl<T> Default for Sum<T>
 where
     T: iter::Sum,
