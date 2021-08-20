@@ -1,8 +1,9 @@
 //! Generic abstractions for combining and nesting reduction patterns for iterables.
 //!
-//! The main entry point to this library is [`Reduce::reduce_with`], which can be called
-//! on any [`Iterator`], and is very similar to [`Iterator::reduce`], but uses a generic
-//! implementation of a [`Reductor`] for the reduction logic.
+//! The main entry points to this library are [`Reduce::reduce_with`] and
+//! [`Reduce::fold_with`], which can be called on any [`Iterator`], and are
+//! similar to [`Iterator::reduce`] and [`Iterator::fold`], respectively,
+//! but use a generic implementation of a [`Reductor`] for the reduction logic.
 //!
 //! The following examples shows some of the basic building blocks from which `reductor`
 //! enables building more complex patterns:
@@ -19,8 +20,8 @@
 //! assert_eq!(product, iter.clone().product());
 //! assert_eq!(count, iter.clone().count());
 //!
-//! let Min(min) = iter.clone().reduce_with::<Option<Min<u32>>>().unwrap();
-//! let Max(max) = iter.clone().reduce_with::<Option<Max<u32>>>().unwrap();
+//! let Min(min) = iter.clone().fold_with::<Min<u32>>(0);
+//! let Max(max) = iter.clone().fold_with::<Max<u32>>(0);
 //! assert_eq!(min, iter.clone().next().unwrap());
 //! assert_eq!(max, iter.last().unwrap());
 //! ```
