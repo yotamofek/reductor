@@ -1,6 +1,6 @@
 [package]
 name = "reductor"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2018"
 authors = ["Yotam Ofek <yotam.ofek@gmail.com>"]
 description = "Generic abstractions for combining and nesting reduction patterns for iterables."
