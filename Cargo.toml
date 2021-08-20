@@ -8,4 +8,3 @@ repository = "https://github.com/yotamofek/reductor/"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-num-traits = "0.2"
