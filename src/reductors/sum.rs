@@ -2,6 +2,7 @@ use std::iter::{self, empty, once};
 
 use crate::Reductor;
 
+/// Reductor that adds items yielded by an iterator to each other (similary to [`Iterator::sum`]).
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
 pub struct Sum<T>(pub T);

@@ -1,5 +1,61 @@
+/// Reductors are types that implement the logic for [`fold`](Iterator::fold)ing an iterator
+/// into a single result.
+///
+/// ```rust
+/// use reductor::{Reductor, Reduce};
+///
+/// #[derive(Default)]
+/// struct Mean { mean: f32, count: usize };
+///
+/// impl Reductor<f32> for Mean {
+///     fn new(item: f32) -> Self {
+///         Self { mean: item, count: 1 }
+///     }
+///
+///     fn reduce(acc: Self, item: f32) -> Self {
+///         let mean = acc.mean * (acc.count as f32);
+///         let count = acc.count + 1;
+///         Self {
+///             mean: (mean + item) / (count as f32),
+///             count,
+///         }
+///     }
+/// }
+///
+/// let Mean { mean, .. } = vec![8.5, -5.5, 2.0, -4.0].into_iter().reduce_with::<Mean>();
+/// assert!((mean - 0.25).abs() < f32::EPSILON, "Wrong mean: {}", mean);
+/// ```
+///
+/// # Blanket implementations
+///
+/// ## Option
+/// Since `Reductor` is implemented for `Option<R> where R: Reducer`, a reductor that
+/// does not implement the [`Default`] trait (e.g. [`Max`](crate::reductors::Max) and
+/// [`Min`](crate::reductors::Min)) can be used with [`reduce_with`](crate::Reduce::reduce_with)
+/// by wrapping it in an [`Option`].
+///
+/// ## Two-element tuple
+/// Two `Reductor`s can be combined in a tuple to reduce iterators that product two-element tuples.
+///
+/// ```rust
+/// use reductor::{Reduce, Sum, Product};
+///
+/// let iter1 = (50..60);
+/// let iter2 = (10..20);
+/// let (Sum(sum), Product(product)) = iter1.clone().zip(iter2.clone())
+///     .reduce_with::<(Sum<u64>, Product<u64>)>();
+///
+/// assert_eq!(sum, iter1.sum());
+/// assert_eq!(product, iter2.product())
+/// ```
+
 pub trait Reductor<A>: Sized {
+    /// This method will be called with the first item yielded by an iterator
+    /// to create the initial state of the reductor.
     fn new(item: A) -> Self;
+
+    /// Reduce the current accumulated state with the next item yielded by an iterator,
+    /// returning the new state.
     fn reduce(acc: Self, item: A) -> Self;
 }
 
@@ -43,6 +99,9 @@ where
     }
 }
 
+/// This struct can be used to pair two [`Reductor`]s to run on a single value,
+/// by [cloning](`Clone`) every element yielded, and updating both `Reductor`s'
+/// states.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ReductorPair<R1, R2>(pub R1, pub R2);
 

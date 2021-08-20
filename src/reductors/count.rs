@@ -1,5 +1,6 @@
 use crate::Reductor;
 
+/// Redactor that counts the number of items yielded by an iterator (similary to [`Iterator::count`]).
 #[repr(transparent)]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Count(pub usize);

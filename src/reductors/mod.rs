@@ -1,3 +1,5 @@
+//! Standard implementations of [`Reductor`](crate::Reductor).
+
 mod count;
 pub use self::count::Count;
 

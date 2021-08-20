@@ -3,7 +3,13 @@ use std::cmp;
 use crate::Reductor;
 
 macro_rules! impl_min_max {
-    ($type:ident, $cmp:path) => {
+    ($type:ident, $cmp:path, $doc:expr, $similar:expr) => {
+        #[doc = "Reductor that retains "]
+        #[doc = $doc]
+        #[doc = " value yielded by iterator"]
+        #[doc = " (similary to [`"]
+        #[doc = $similar]
+        #[doc = "`])."]
         #[repr(transparent)]
         #[derive(Debug, Clone, Copy)]
         pub struct $type<T>(pub T);
@@ -50,5 +56,5 @@ macro_rules! impl_min_max {
     };
 }
 
-impl_min_max!(Max, std::cmp::max);
-impl_min_max!(Min, std::cmp::min);
+impl_min_max!(Max, std::cmp::max, "maximum", "Iterator::max");
+impl_min_max!(Min, std::cmp::min, "minimum", "Iterator::min");

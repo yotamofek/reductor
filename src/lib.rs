@@ -84,6 +84,8 @@
 //! assert_eq!(max, iter.map(|(.., x)| x).max().unwrap());
 //! ```
 
+#![warn(missing_docs)]
+
 mod reductor;
 pub use self::reductor::{Reductor, ReductorPair};
 

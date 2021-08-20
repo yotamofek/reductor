@@ -2,6 +2,7 @@ use std::iter::{self, empty, once};
 
 use crate::Reductor;
 
+/// Reductor that multiplies items yielded by an iterator by one another (similary to [`Iterator::product`]).
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
 pub struct Product<T>(pub T);
