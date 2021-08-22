@@ -1,7 +1,7 @@
 //! Standard implementations of [`Reductor`](crate::Reductor).
 
 mod count;
-pub use self::count::Count;
+pub use self::count::{Count, CountNonZero};
 
 mod sum;
 pub use self::sum::Sum;

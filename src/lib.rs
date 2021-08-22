@@ -13,17 +13,17 @@
 //!
 //! let iter = 0..10;
 //!
-//! let Sum(sum) = iter.clone().reduce_with::<Sum<u32>>();
-//! let Product(product) = iter.clone().reduce_with::<Product<u32>>();
+//! let Sum::<u32>(sum) = iter.clone().reduce_with();
+//! let Product::<u32>(product) = iter.clone().fold_with(2);
 //! let Count(count) = iter.clone().reduce_with();
 //! assert_eq!(sum, iter.clone().sum());
-//! assert_eq!(product, iter.clone().product());
+//! assert_eq!(product, iter.clone().product::<u32>() * 2);
 //! assert_eq!(count, iter.clone().count());
 //!
-//! let Min(min) = iter.clone().fold_with::<Min<u32>>(0);
-//! let Max(max) = iter.clone().fold_with::<Max<u32>>(0);
-//! assert_eq!(min, iter.clone().next().unwrap());
-//! assert_eq!(max, iter.last().unwrap());
+//! let min: Option<Min<u32>> = iter.clone().reduce_with();
+//! let Max::<Option<u32>>(max) = iter.clone().reduce_with();
+//! assert_eq!(min.unwrap(), Min(iter.start));
+//! assert_eq!(max.unwrap(), iter.last().unwrap());
 //! ```
 //!
 //! Notice that unlike [`Sum`] and [`Product`], [`Min`] and [`Max`] won't reduce
@@ -37,10 +37,11 @@
 //! use reductor::{Reduce, Sum, Product};
 //!
 //! let iter = 0..10;
-//! let (Sum(sum), Product(product)) = iter
+//!
+//! let (Sum::<usize>(sum), Product::<usize>(product)) = iter
 //!     .clone()
 //!     .map(|x| (x, x * 2))
-//!     .reduce_with::<(Sum<usize>, Product<usize>)>();
+//!     .reduce_with();
 //!
 //! assert_eq!(sum, iter.clone().sum());
 //! assert_eq!(product, iter.map(|x| x * 2).product());
@@ -50,22 +51,30 @@
 //! reducing an iterator producing a single value by a pair of [`Reductor`]s, in tandem.
 //!
 //! ```rust
-//! use reductor::{Reduce, ReductorPair, Min, Max};
+//! use reductor::{Reduce, ReductorPair, Min, Max, Sum};
 //!
 //! let iter = 0..10;
-//! let ReductorPair(Min(min), Max(max)) = iter
+//!
+//! let ReductorPair(Min::<usize>(min), Max::<usize>(max)) = iter
 //!     .clone()
-//!     .reduce_with::<Option<ReductorPair<Min<usize>, Max<usize>>>>()
+//!     .reduce_with::<Option<_>>()
 //!     .unwrap();
 //!
-//! assert_eq!(min, iter.clone().next().unwrap());
-//! assert_eq!(max, iter.last().unwrap());
+//! assert_eq!(min, iter.start);
+//! assert_eq!(max, iter.end - 1);
+//!
+//! let ReductorPair(Min::<Option<usize>>(min), Sum::<usize>(sum)) = iter
+//!     .clone()
+//!     .reduce_with();
+//!
+//! assert_eq!(min.unwrap(), iter.start);
+//! assert_eq!(sum, iter.sum());
 //! ```
 //!
 //! These constructs allow building very complex iterator loops that compose
 //! numerous reductions into a single set of results.
 //! ```rust
-//! use reductor::{Reduce, ReductorPair, Count, Sum, Product, Max, Min};
+//! use reductor::{Reduce, ReductorPair, Count, Sum, Max, Min};
 //!
 //! let iter = (0_i32..100).filter_map(|x| {
 //!     if x % 2 == 0 {
@@ -75,9 +84,10 @@
 //!     }
 //! });
 //!
-//! let ReductorPair(Count(count), (Sum(sum), ReductorPair(Min(min), Max(max)))) = iter
-//!     .clone()
-//!     .reduce_with::<Option<ReductorPair<Count, (Sum<i32>, ReductorPair<Min<u32>, Max<u32>>)>>>().unwrap();
+//! let ReductorPair(
+//!     Count(count),
+//!     (Sum::<i32>(sum), ReductorPair(Min::<u32>(min), Max::<u32>(max))),
+//! ) = iter.clone().reduce_with::<Option<_>>().unwrap();
 //!
 //! assert_eq!(count, iter.clone().count());
 //! assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());

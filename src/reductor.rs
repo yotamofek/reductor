@@ -4,98 +4,131 @@
 /// ```rust
 /// use reductor::{Reductor, Reduce};
 ///
-/// #[derive(Default)]
-/// struct Mean { mean: f32, count: usize };
+/// struct MeanState { mean: f32, count: usize };
+///
+/// struct Mean(f32);
 ///
 /// impl Reductor<f32> for Mean {
-///     fn new(item: f32) -> Self {
-///         Self { mean: item, count: 1 }
+///     type State = MeanState;
+///     
+///     fn new(item: f32) -> Self::State {
+///         MeanState { mean: item, count: 1 }
 ///     }
 ///
-///     fn reduce(acc: Self, item: f32) -> Self {
-///         let mean = acc.mean * (acc.count as f32);
-///         let count = acc.count + 1;
-///         Self {
-///             mean: (mean + item) / (count as f32),
-///             count,
+///     fn reduce(acc: Self::State, item: f32) -> Self::State {
+///         MeanState {
+///             mean: acc.mean + item,
+///             count: acc.count + 1,
 ///         }
+///     }
+///     
+///     fn into_result(state: Self::State) -> Self {
+///         Self(state.mean / state.count as f32)
 ///     }
 /// }
 ///
-/// let Mean { mean, .. } = vec![8.5, -5.5, 2.0, -4.0].into_iter().reduce_with::<Mean>();
-/// assert!((mean - 0.25).abs() < f32::EPSILON, "Wrong mean: {}", mean);
+/// let Mean(mean) = vec![8.5, -5.5, 2.0, -4.0].into_iter()
+///     .reduce_with::<Option<Mean>>()
+///     .unwrap();
+///
+/// assert!((mean - 0.25).abs() < f32::EPSILON);
 /// ```
-///
-/// # Blanket implementations
-///
-/// ## Option
-/// Since `Reductor` is implemented for `Option<R> where R: Reducer`, a reductor that
-/// does not implement the [`Default`] trait (e.g. [`Max`](crate::reductors::Max) and
-/// [`Min`](crate::reductors::Min)) can be used with [`reduce_with`](crate::Reduce::reduce_with)
-/// by wrapping it in an [`Option`].
-///
-/// ## Two-element tuple
-/// Two `Reductor`s can be combined in a tuple to reduce iterators that product two-element tuples.
-///
-/// ```rust
-/// use reductor::{Reduce, Sum, Product};
-///
-/// let iter1 = (50..60);
-/// let iter2 = (10..20);
-/// let (Sum(sum), Product(product)) = iter1.clone().zip(iter2.clone())
-///     .reduce_with::<(Sum<u64>, Product<u64>)>();
-///
-/// assert_eq!(sum, iter1.sum());
-/// assert_eq!(product, iter2.product())
-/// ```
-
 pub trait Reductor<A>: Sized {
+    /// Intermediate state for the reductor.
+    ///
+    /// This type is used to keep track of the state of reduction while processing
+    /// an iterator. The first item yielded is converted into the `State` type by
+    /// calling [`new`](Reductor::new). The next item will be reduced using the previous
+    /// state by calling [`reduce`](Reductor::reduce) with the new item, and the resulting
+    /// state will be used for the next reduction, and so forth. When the iterator
+    /// is exhausted, the intermediate state will be turned into a result by calling
+    /// [`into_result`](Reductor::into_result).
+    ///
+    /// `State` must implement the [`Default`] trait for the `Reductor` to be used
+    /// with [`reduce_with`](crate::Reduce::reduce_with), otherwise, an initial state
+    /// can be provided by calling [`fold_with`](crate::Reduce::fold_with).
+    type State;
+
     /// This method will be called with the first item yielded by an iterator
     /// to create the initial state of the reductor.
-    fn new(item: A) -> Self;
+    fn new(item: A) -> Self::State;
 
     /// Reduce the current accumulated state with the next item yielded by an iterator,
     /// returning the new state.
-    fn reduce(acc: Self, item: A) -> Self;
+    fn reduce(state: Self::State, item: A) -> Self::State;
+
+    /// After reducing the entire iterator, and exhausting it, turn the final state into
+    /// a result.
+    fn into_result(state: Self::State) -> Self;
 }
 
+/// Wrapping a [`Reductor`] in an [`Option`] allows using [`reduce_with`](crate::Reduce::reduce_with)
+/// with a `Reductor` whose [`State`](Reductor::State) does not implement [`Default`].
+///
+/// ```compile_fail
+/// # use reductor::{Reduce, Min};
+/// let _ = (0..10).reduce_with::<Min<u32>>();
+/// ```
+///
+/// ```rust
+/// # use reductor::{Reduce, Min};
+/// let _ = (0..10).reduce_with::<Option<Min<u32>>>();
+/// ```
 impl<R, A> Reductor<A> for Option<R>
 where
     R: Reductor<A>,
 {
-    #[inline]
-    fn new(item: A) -> Self {
-        Some(<R as Reductor<A>>::new(item))
+    type State = Option<R::State>;
+
+    fn new(item: A) -> Self::State {
+        Some(R::new(item))
     }
 
-    #[inline]
-    fn reduce(acc: Self, item: A) -> Self {
-        Some(match acc {
-            Some(acc) => <R as Reductor<A>>::reduce(acc, item),
-            None => <R as Reductor<A>>::new(item),
+    fn reduce(state: Self::State, item: A) -> Self::State {
+        Some(match state {
+            None => R::new(item),
+            Some(state) => R::reduce(state, item),
         })
+    }
+
+    fn into_result(state: Self::State) -> Self {
+        state.map(R::into_result)
     }
 }
 
+/// Two `Reductor`s can be combined in a tuple to reduce iterators that yield two-element tuples.
+///
+/// ```rust
+/// use reductor::{Reduce, Sum, Product};
+///
+/// let iter = (5..10).map(|x| (x, -(x as i64)));
+///
+/// let (Sum(sum), Product(product)) = iter
+///     .clone()
+///     .reduce_with::<(Sum<u64>, Product<i64>)>();
+///
+/// assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
+/// assert_eq!(product, iter.clone().map(|(.., x)| x).product())
+/// ```
+///
+/// See [`ReductorPair`] for reducing a single-item tuple with two `Reductor`s.
 impl<R1, R2, A1, A2> Reductor<(A1, A2)> for (R1, R2)
 where
     R1: Reductor<A1>,
     R2: Reductor<A2>,
 {
-    #[inline]
-    fn new((item1, item2): (A1, A2)) -> Self {
-        (
-            <R1 as Reductor<A1>>::new(item1),
-            <R2 as Reductor<A2>>::new(item2),
-        )
+    type State = (R1::State, R2::State);
+
+    fn new(item: (A1, A2)) -> Self::State {
+        (R1::new(item.0), R2::new(item.1))
     }
 
-    #[inline]
-    fn reduce(acc: Self, (item1, item2): (A1, A2)) -> Self {
-        (
-            <R1 as Reductor<A1>>::reduce(acc.0, item1),
-            <R2 as Reductor<A2>>::reduce(acc.1, item2),
-        )
+    fn reduce(state: Self::State, item: (A1, A2)) -> Self::State {
+        (R1::reduce(state.0, item.0), R2::reduce(state.1, item.1))
+    }
+
+    fn into_result(state: Self::State) -> Self {
+        (R1::into_result(state.0), R2::into_result(state.1))
     }
 }
 
@@ -111,19 +144,17 @@ where
     R1: Reductor<A>,
     R2: Reductor<A>,
 {
-    #[inline]
-    fn new(item: A) -> Self {
-        Self(
-            <R1 as Reductor<A>>::new(item.clone()),
-            <R2 as Reductor<A>>::new(item),
-        )
+    type State = (R1::State, R2::State);
+
+    fn new(item: A) -> Self::State {
+        (R1::new(item.clone()), R2::new(item))
     }
 
-    #[inline]
-    fn reduce(acc: Self, item: A) -> Self {
-        Self(
-            <R1 as Reductor<A>>::reduce(acc.0, item.clone()),
-            <R2 as Reductor<A>>::reduce(acc.1, item),
-        )
+    fn reduce(state: Self::State, item: A) -> Self::State {
+        (R1::reduce(state.0, item.clone()), R2::reduce(state.1, item))
+    }
+
+    fn into_result(state: Self::State) -> Self {
+        Self(R1::into_result(state.0), R2::into_result(state.1))
     }
 }

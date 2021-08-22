@@ -1,85 +1,57 @@
+# reductor
+
 Generic abstractions for combining and nesting reduction patterns for iterables.
 
-The main entry point to this library is `Reduce::reduce_with`, which can be called
-on any `Iterator`, and is very similar to `Iterator::reduce`, but uses a generic
-implementation of a `Reductor` for the reduction logic.
+Docs: [https//docs.rs/reductor](https://docs.rs/reductor)
 
-The following examples shows some of the basic building blocks from which `reductor`
-enables building more complex patterns:
+## Before & After:
 
-```rust
-use reductor::{Reduce, Sum, Product, Count, Min, Max};
-
-let iter = 0..10;
-
-let Sum(sum) = iter.clone().reduce_with::<Sum<u32>>();
-let Product(product) = iter.clone().reduce_with::<Product<u32>>();
-let Count(count) = iter.clone().reduce_with();
-assert_eq!(sum, iter.clone().sum());
-assert_eq!(product, iter.clone().product());
-assert_eq!(count, iter.clone().count());
-
-let Max(max) = iter.clone().reduce_with::<Max<Option<u32>>>();
-let Min(min) = iter.clone().reduce_with::<Min<Option<u32>>>();
-assert_eq!(max, Some(9));
-assert_eq!(min, Some(0));
-```
-
-Notice that unlike `Sum` and `Product`, `Min` and `Max` won't reduce
-an empty iterator into the default value. This mirrors the way `Iterator::max`
-returns an `Option<T>`, unlike `Iterator::sum`.
-
-Now, let's combine two `Reductor`s to reduce an iterator that produces a pair of values:
+### Before
 
 ```rust
-use reductor::{Reduce, Sum, Product};
+fn process_samples(samples: &[i32], scale: &[i32], upper_limit: i32) {
+    let mut sum = 0;
+    let mut min = None;
+    let mut max = None;
 
-let iter = 0..10;
-let (Sum(sum), Product(product)) = iter
-    .clone()
-    .map(|x| (x, x * 2))
-    .reduce_with::<(Sum<usize>, Product<usize>)>();
+    for (sample, scale) in samples.iter().zip(scale) {
+        let scaled = sample * scale;
 
-assert_eq!(sum, iter.clone().sum());
-assert_eq!(product, iter.map(|x| x * 2).product());
-```
+        if scaled <= upper_limit {
+            continue;
+        }
 
-Another abstraction provided by this library is `ReductorPair`, which allows
-reducing an iterator producing a single value by a pair of `Reductor`s, in tandem.
-
-```rust
-use reductor::{Reduce, ReductorPair, Sum, Max};
-
-let iter = 0..10;
-let ReductorPair(Max(max), Sum(sum)) = iter
-    .clone()
-    .map(|x| x)
-    .reduce_with::<Option<ReductorPair<Max<usize>, Sum<usize>>>>().unwrap();
-
-assert_eq!(sum, iter.clone().sum());
-assert_eq!(max, iter.clone().max().unwrap());
-```
-
-These constructs allow building very complex iterator loops that compose
-numerous reductions into a single set of results.
-
-```rust
-use reductor::{Reduce, ReductorPair, Count, Sum, Product, Max, Min};
-
-let iter = (0_i32..100).filter_map(|x| {
-    if x % 2 == 0 {
-        None
-    } else {
-        Some((x, x.leading_zeros()))
+        sum += scaled;
+        min = Some(match min {
+            Some(min) => scaled.min(min),
+            None => scaled,
+        });
+        max = Some(match max {
+            Some(max) => scaled.max(max),
+            None => scaled,
+        });
     }
-});
 
-let ReductorPair(Count(count), (Sum(sum), ReductorPair(Min(min), Max(max)))) = iter
-    .clone()
-    .reduce_with::<Option<ReductorPair<Count, (Sum<i32>, ReductorPair<Min<u32>, Max<u32>>)>>>().unwrap();
+    // ...
+}
+```
 
-assert_eq!(count, iter.clone().count());
-assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
-assert_eq!(min, iter.clone().map(|(.., x)| x).min().unwrap());
-assert_eq!(max, iter.map(|(.., x)| x).max().unwrap());
+### After
+
+```rust
+use reductor::{Reduce, ReductorPair, Sum, Min, Max};
+
+fn process_samples(samples: &[i32], scale: &[i32], upper_limit: i32) {
+    let ReductorPair(
+        Sum::<i32>(sum),
+        ReductorPair(Min::<Option<i32>>(min), Max::<Option<i32>>(max)),
+    ) = samples
+        .iter()
+        .zip(scale)
+        .map(|(sample, scale)| sample * scale)
+        .filter(|&scaled| scaled <= upper_limit)
+        .reduce_with();
+
+    // ...
+}
 ```

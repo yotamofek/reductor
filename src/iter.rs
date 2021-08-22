@@ -7,21 +7,22 @@ pub trait Reduce: Iterator + Sized {
     #[inline]
     fn reduce_with<R>(self) -> R
     where
-        R: Reductor<Self::Item> + Default,
+        R: Reductor<Self::Item>,
+        R::State: Default,
     {
-        let reductor = R::default();
-        self.fold(reductor, <R as Reductor<Self::Item>>::reduce)
+        let state = R::State::default();
+        R::into_result(self.fold(state, R::reduce))
     }
 
     /// Similar to [`Iterator::fold`], but uses a generic implementation of [`Reductor`],
     /// instead of a function parameter, to supply the reduction logic.
     #[inline]
-    fn fold_with<R>(self, init: Self::Item) -> R
+    fn fold_with<R, I>(self, init: I) -> R
     where
         R: Reductor<Self::Item>,
+        R::State: From<I>,
     {
-        let reductor = <R as Reductor<Self::Item>>::new(init);
-        self.fold(reductor, <R as Reductor<Self::Item>>::reduce)
+        R::into_result(self.fold(init.into(), R::reduce))
     }
 }
 
