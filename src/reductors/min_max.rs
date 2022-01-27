@@ -1,4 +1,4 @@
-use std::cmp;
+use std::cmp::{self, Ord};
 
 use crate::Reductor;
 
@@ -17,43 +17,44 @@ impl<T> Default for State<Option<T>> {
     }
 }
 
+macro_rules! impl_min_max_inner {
+    ($inner:ident, $cmp:path) => {
+        type State = State<$inner>;
+
+        #[inline]
+        fn new(v: $inner) -> Self::State {
+            State(v)
+        }
+
+        #[inline]
+        fn reduce(state: Self::State, item: $inner) -> Self::State {
+            State($cmp(state.0, item))
+        }
+
+        #[inline]
+        fn into_result(state: Self::State) -> Self {
+            Self(state.0)
+        }
+    };
+}
+
 macro_rules! impl_min_max {
-    ($type:ident, $cmp:path, $doc:expr, $similar:expr) => {
-        #[doc = "Reductor that retains "]
+    ($type:ident, $cmp:path, $doc:expr) => {
         #[doc = $doc]
-        #[doc = " value yielded by iterator"]
-        #[doc = " (similary to [`"]
-        #[doc = $similar]
-        #[doc = "`])."]
         #[repr(transparent)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub struct $type<T>(pub T);
 
         impl<T> Reductor<T> for $type<T>
         where
-            T: cmp::Ord,
+            T: Ord,
         {
-            type State = State<T>;
-
-            #[inline]
-            fn new(v: T) -> Self::State {
-                State(v)
-            }
-
-            #[inline]
-            fn reduce(state: Self::State, item: T) -> Self::State {
-                State($cmp(state.0, item))
-            }
-
-            #[inline]
-            fn into_result(state: Self::State) -> Self {
-                Self(state.0)
-            }
+            impl_min_max_inner!(T, $cmp);
         }
 
         impl<T> Reductor<T> for $type<Option<T>>
         where
-            T: cmp::Ord,
+            T: Ord,
         {
             type State = State<Option<T>>;
 
@@ -78,44 +79,78 @@ macro_rules! impl_min_max {
     };
 }
 
-impl_min_max!(Max, std::cmp::max, "maximum", "Iterator::max");
-impl_min_max!(Min, std::cmp::min, "minimum", "Iterator::min");
+macro_rules! min_max_doc_inner {
+    ($value:expr, $parens:expr) => {
+        concat!(
+            "Reductor that retains ",
+            $value,
+            " value yielded by iterator (",
+            $parens,
+            ")."
+        )
+    };
+}
 
-macro_rules! impl_float_min_max {
-    ($type:ident, $float:ident, $cmp:path, $doc:expr, $cmp_name:expr) => {
-        #[doc = "Reductor that retains "]
+macro_rules! min_max_doc {
+    ($value:expr, $cmp:ident) => {
+        min_max_doc_inner!(
+            $value,
+            concat!("similarly to [`Iterator::", stringify!($cmp), "`]")
+        )
+    };
+}
+
+impl_min_max!(Min, cmp::min, min_max_doc!("minimum", min));
+impl_min_max!(Max, cmp::max, min_max_doc!("maximum", max));
+
+macro_rules! impl_float_min_max_inner {
+    ($type:ident, $float:ident, $cmp:ident, $doc:expr) => {
         #[doc = $doc]
-        #[doc = " yielded by iterator"]
-        #[doc = " (using [`"]
-        #[doc = $cmp_name]
-        #[doc = "`] under the hood)."]
         #[repr(transparent)]
         #[derive(Debug, Clone, Copy)]
         pub struct $type(pub $float);
 
         impl Reductor<$float> for $type {
-            type State = State<$float>;
-
-            #[inline]
-            fn new(v: $float) -> Self::State {
-                State(v)
-            }
-
-            #[inline]
-            fn reduce(state: Self::State, item: $float) -> Self::State {
-                State($cmp(state.0, item))
-            }
-
-            #[inline]
-            fn into_result(state: Self::State) -> Self {
-                Self(state.0)
-            }
+            impl_min_max_inner!($float, $float::$cmp);
         }
     };
 }
 
-impl_float_min_max!(MaxF32, f32, f32::max, "maximum [`f32`]", "f32::max");
-impl_float_min_max!(MinF32, f32, f32::min, "minimum [`f32`]", "f32::min");
+macro_rules! float_min_max_doc {
+    ($type:ident, $value:expr, $cmp:ident) => {
+        min_max_doc_inner!(
+            $value,
+            concat!(
+                "using [`",
+                stringify!($type),
+                "::",
+                stringify!($cmp),
+                "`] under the hood"
+            )
+        )
+    };
+}
 
-impl_float_min_max!(MaxF64, f64, f64::max, "maximum [`f64`]", "f64::max");
-impl_float_min_max!(MinF64, f64, f64::min, "minimum [`f64`]", "f64::min");
+macro_rules! impl_float_min_max {
+    (
+        $type:ident,
+        Min: $min_type:ident,
+        Max: $max_type:ident
+    ) => {
+        impl_float_min_max_inner!(
+            $min_type,
+            $type,
+            min,
+            float_min_max_doc!($type, "minimum", min)
+        );
+        impl_float_min_max_inner!(
+            $max_type,
+            $type,
+            max,
+            float_min_max_doc!($type, "maximum", max)
+        );
+    };
+}
+
+impl_float_min_max!(f32, Min: MinF32, Max: MaxF32);
+impl_float_min_max!(f64, Min: MinF64, Max: MaxF64);
