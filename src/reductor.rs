@@ -96,41 +96,54 @@ where
     }
 }
 
-/// Two `Reductor`s can be combined in a tuple to reduce iterators that yield two-element tuples.
-///
-/// ```rust
-/// use reductor::{Reduce, Sum, Product};
-///
-/// let iter = (5..10).map(|x| (x, -(x as i64)));
-///
-/// let (Sum(sum), Product(product)) = iter
-///     .clone()
-///     .reduce_with::<(Sum<u64>, Product<i64>)>();
-///
-/// assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
-/// assert_eq!(product, iter.clone().map(|(.., x)| x).product())
-/// ```
-///
-/// See [`ReductorPair`] for reducing a single-item tuple with two `Reductor`s.
-impl<R1, R2, A1, A2> Reductor<(A1, A2)> for (R1, R2)
-where
-    R1: Reductor<A1>,
-    R2: Reductor<A2>,
-{
-    type State = (R1::State, R2::State);
+macro_rules! impl_reductor_for_tuple {
+    ($(#[$meta:meta])* $($A:ident: $R:ident),+$(,)?) => {
+        $(#[$meta])*
+        impl<$($A),+, $($R),+> Reductor<($($A),+)> for ($($R),+)
+        where
+            $($R: Reductor<$A>),+
+        {
+            type State = ($($R::State),+);
 
-    fn new(item: (A1, A2)) -> Self::State {
-        (R1::new(item.0), R2::new(item.1))
-    }
+            fn new(item: ($($A),+)) -> Self::State {
+                ($($R::new(item.${index()})),+)
+            }
 
-    fn reduce(state: Self::State, item: (A1, A2)) -> Self::State {
-        (R1::reduce(state.0, item.0), R2::reduce(state.1, item.1))
-    }
+            fn reduce(state: Self::State, item: ($($A),+)) -> Self::State {
+                ($($R::reduce(state.${index()}, item.${index()})),+)
+            }
 
-    fn into_result(state: Self::State) -> Self {
-        (R1::into_result(state.0), R2::into_result(state.1))
-    }
+            fn into_result(state: Self::State) -> Self {
+                ($($R::into_result(state.${index()})),+)
+            }
+        }
+    };
 }
+
+impl_reductor_for_tuple!(
+    /// Two `Reductor`s can be combined in a tuple to reduce iterators that yield two-element tuples.
+    ///
+    /// ```rust
+    /// use reductor::{Reduce, Sum, Product};
+    ///
+    /// let iter = (5..10).map(|x| (x, -(x as i64)));
+    ///
+    /// let (Sum(sum), Product(product)) = iter
+    ///     .clone()
+    ///     .reduce_with::<(Sum<u64>, Product<i64>)>();
+    ///
+    /// assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
+    /// assert_eq!(product, iter.clone().map(|(.., x)| x).product())
+    /// ```
+    ///
+    /// See [`ReductorPair`] for reducing a single-item tuple with two `Reductor`s.
+    A1: R1,
+    A2: R2,
+);
+
+impl_reductor_for_tuple!(A1: R1, A2: R2, A3: R3);
+impl_reductor_for_tuple!(A1: R1, A2: R2, A3: R3, A4: R4);
+impl_reductor_for_tuple!(A1: R1, A2: R2, A3: R3, A4: R4, A5: R5);
 
 /// This struct can be used to pair two [`Reductor`]s to run on a single value,
 /// by [cloning](`Clone`) every element yielded, and updating both `Reductor`s'

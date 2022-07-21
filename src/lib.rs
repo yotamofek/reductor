@@ -1,3 +1,5 @@
+#![feature(macro_metavar_expr)]
+
 //! Generic abstractions for combining and nesting reduction patterns for iterables.
 //!
 //! The main entry points to this library are [`Reduce::reduce_with`] and
