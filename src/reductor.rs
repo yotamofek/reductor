@@ -97,7 +97,7 @@ where
 }
 
 macro_rules! impl_reductor_for_tuple {
-    ($(#[$meta:meta])* $($A:ident: $R:ident),+$(,)?) => {
+    ($(#[$meta:meta])* $([$A:ident: $R:ident, $Idx:tt]),+$(,)?) => {
         $(#[$meta])*
         impl<$($A),+, $($R),+> Reductor<($($A),+)> for ($($R),+)
         where
@@ -106,15 +106,15 @@ macro_rules! impl_reductor_for_tuple {
             type State = ($($R::State),+);
 
             fn new(item: ($($A),+)) -> Self::State {
-                ($($R::new(item.${index()})),+)
+                ($($R::new(item.$Idx)),+)
             }
 
             fn reduce(state: Self::State, item: ($($A),+)) -> Self::State {
-                ($($R::reduce(state.${index()}, item.${index()})),+)
+                ($($R::reduce(state.$Idx, item.$Idx)),+)
             }
 
             fn into_result(state: Self::State) -> Self {
-                ($($R::into_result(state.${index()})),+)
+                ($($R::into_result(state.$Idx)),+)
             }
         }
     };
@@ -137,13 +137,19 @@ impl_reductor_for_tuple!(
     /// ```
     ///
     /// See [`ReductorPair`] for reducing a single-item tuple with two `Reductor`s.
-    A1: R1,
-    A2: R2,
+    [A1: R1, 0],
+    [A2: R2, 1],
 );
 
-impl_reductor_for_tuple!(A1: R1, A2: R2, A3: R3);
-impl_reductor_for_tuple!(A1: R1, A2: R2, A3: R3, A4: R4);
-impl_reductor_for_tuple!(A1: R1, A2: R2, A3: R3, A4: R4, A5: R5);
+impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2]);
+impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2], [A4: R4, 3]);
+impl_reductor_for_tuple!(
+    [A1: R1, 0],
+    [A2: R2, 1],
+    [A3: R3, 2],
+    [A4: R4, 3],
+    [A5: R5, 4]
+);
 
 /// This struct can be used to pair two [`Reductor`]s to run on a single value,
 /// by [cloning](`Clone`) every element yielded, and updating both `Reductor`s'
