@@ -43,20 +43,14 @@ fn process_samples(
 ### After
 
 ```rust
-use reductor::{Reduce, ReductorPair, Sum, Min, Max};
+use reductor::{Reduce, Reductors, Sum, Min, Max};
 
 fn process_samples(
     samples: &[i32],
     scale: &[i32],
     upper_limit: i32
 ) {
-    let ReductorPair(
-        Sum::<i32>(sum),
-        ReductorPair(
-            Min::<Option<i32>>(min),
-            Max::<Option<i32>>(max),
-        ),
-    ) = samples
+    let Reductors((Sum::<i32>(sum), Min::<Option<i32>>(min), Max::<Option<i32>>(max))) = samples
         .iter()
         .zip(scale)
         .map(|(sample, scale)| sample * scale)

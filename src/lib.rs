@@ -47,15 +47,15 @@
 //! assert_eq!(product, iter.map(|x| x * 2).product());
 //! ```
 //!
-//! Another abstraction provided by this library is [`ReductorPair`], which allows
-//! reducing an iterator producing a single value by a pair of [`Reductor`]s, in tandem.
+//! Another abstraction provided by this library is [`Reductors`], which allows
+//! reducing an iterator producing a single value by a tuple of [`Reductor`]s, in tandem.
 //!
 //! ```rust
-//! use reductor::{Reduce, ReductorPair, Min, Max, Sum};
+//! use reductor::{Reduce, Reductors, Min, Max, Sum};
 //!
 //! let iter = 0..10;
 //!
-//! let ReductorPair(Min::<usize>(min), Max::<usize>(max)) = iter
+//! let Reductors((Min::<usize>(min), Max::<usize>(max))) = iter
 //!     .clone()
 //!     .reduce_with::<Option<_>>()
 //!     .unwrap();
@@ -63,7 +63,7 @@
 //! assert_eq!(min, iter.start);
 //! assert_eq!(max, iter.end - 1);
 //!
-//! let ReductorPair(Min::<Option<usize>>(min), Sum::<usize>(sum)) = iter
+//! let Reductors((Min::<Option<usize>>(min), Sum::<usize>(sum))) = iter
 //!     .clone()
 //!     .reduce_with();
 //!
@@ -74,7 +74,7 @@
 //! These constructs allow building very complex iterator loops that compose
 //! numerous reductions into a single set of results.
 //! ```rust
-//! use reductor::{Reduce, ReductorPair, Count, Sum, Max, Min};
+//! use reductor::{Reduce, Reductors, Count, Sum, Max, Min};
 //!
 //! let iter = (0_i32..100).filter_map(|x| {
 //!     if x % 2 == 0 {
@@ -84,10 +84,10 @@
 //!     }
 //! });
 //!
-//! let ReductorPair(
+//! let Reductors((
 //!     Count(count),
-//!     (Sum::<i32>(sum), ReductorPair(Min::<u32>(min), Max::<u32>(max))),
-//! ) = iter.clone().reduce_with::<Option<_>>().unwrap();
+//!     (Sum::<i32>(sum), Reductors((Min::<u32>(min), Max::<u32>(max)))),
+//! )) = iter.clone().reduce_with::<Option<_>>().unwrap();
 //!
 //! assert_eq!(count, iter.clone().count());
 //! assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
@@ -98,7 +98,7 @@
 #![warn(missing_docs)]
 
 mod reductor;
-pub use self::reductor::{Reductor, ReductorPair};
+pub use self::reductor::{Reductor, Reductors};
 
 mod iter;
 pub use self::iter::Reduce;

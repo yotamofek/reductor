@@ -3,7 +3,7 @@ use std::{
     cmp::{self, Ord},
 };
 
-use crate::{Reductor, ReductorPair};
+use crate::{Reductor, Reductors};
 
 /// Wrapper around `T` that pointedly does NOT implement [`Default`], even though `T` might.
 #[derive(Debug, Clone, Copy)]
@@ -165,7 +165,7 @@ macro_rules! minmax_impl_reductor {
             $type,
             Min: $min,
             Max: $max,
-            Pair: ReductorPair<$min$(<$generic>)?, $max$(<$generic>)?>
+            Pair: Reductors<($min$(<$generic>)?, $max$(<$generic>)?)>
         );
     };
     ($type:ident, Min: $min:ident, Max: $max:ident, Pair: $pair_type:ty) => {
@@ -180,8 +180,7 @@ macro_rules! minmax_impl_reductor {
         }
 
         fn into_result(state: Self::State) -> Self {
-            let ReductorPair($min(min), $max(max)) =
-            <$pair_type as Reductor<$type>>::into_result(state);
+            let Reductors(($min(min), $max(max))) = <$pair_type as Reductor<$type>>::into_result(state);
 
             Self { min, max }
         }

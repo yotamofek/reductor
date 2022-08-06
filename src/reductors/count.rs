@@ -26,11 +26,11 @@ impl<A> Reductor<A> for Count {
 /// ```rust
 /// use std::num::NonZeroUsize;
 ///
-/// use reductor::{Reduce, ReductorPair, CountNonZero, Max};
+/// use reductor::{Reduce, Reductors, CountNonZero, Max};
 ///
 /// let iter = (0..100).filter(|&i| i % 2 == 0);
 ///
-/// let ReductorPair(CountNonZero(count), Max::<usize>(max)) = iter.clone()
+/// let Reductors((CountNonZero(count), Max::<usize>(max))) = iter.clone()
 ///     .reduce_with::<Option<_>>()
 ///     .unwrap();
 ///

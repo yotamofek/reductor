@@ -136,7 +136,7 @@ impl_reductor_for_tuple!(
     /// assert_eq!(product, iter.clone().map(|(.., x)| x).product())
     /// ```
     ///
-    /// See [`ReductorPair`] for reducing a single-item tuple with two `Reductor`s.
+    /// See [`Reductors`] for reducing a single-item tuple with multiple `Reductor`s.
     [A1: R1, 0],
     [A2: R2, 1],
 );
@@ -151,29 +151,38 @@ impl_reductor_for_tuple!(
     [A5: R5, 4]
 );
 
-/// This struct can be used to pair two [`Reductor`]s to run on a single value,
-/// by [cloning](`Clone`) every element yielded, and updating both `Reductor`s'
-/// states.
+/// This struct can be used to run a tuple of [`Reductor`]s on a single value,
+/// by [cloning](`Clone`) every element yielded, and updating all `Reductor`s'
+/// states in each iteration.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ReductorPair<R1, R2>(pub R1, pub R2);
+pub struct Reductors<R>(pub R);
 
-impl<R1, R2, A> Reductor<A> for ReductorPair<R1, R2>
-where
-    A: Clone,
-    R1: Reductor<A>,
-    R2: Reductor<A>,
-{
-    type State = (R1::State, R2::State);
+macro_rules! impl_reductor_for_reductors {
+    ($(#[$meta:meta])* $([$R:ident, $Idx:tt]),+$(,)?) => {
+        $(#[$meta])*
+        impl<A, $($R),+> Reductor<A> for Reductors<($($R),+)>
+        where
+            A: Clone,
+            $($R: Reductor<A>),+
+        {
+            type State = ($($R::State),+);
 
-    fn new(item: A) -> Self::State {
-        (R1::new(item.clone()), R2::new(item))
-    }
+            fn new(item: A) -> Self::State {
+                ($($R::new(item.clone())),+)
+            }
 
-    fn reduce(state: Self::State, item: A) -> Self::State {
-        (R1::reduce(state.0, item.clone()), R2::reduce(state.1, item))
-    }
+            fn reduce(state: Self::State, item: A) -> Self::State {
+                ($($R::reduce(state.$Idx, item.clone())),+)
+            }
 
-    fn into_result(state: Self::State) -> Self {
-        Self(R1::into_result(state.0), R2::into_result(state.1))
-    }
+            fn into_result(state: Self::State) -> Self {
+                Self(($($R::into_result(state.$Idx)),+))
+            }
+        }
+    };
 }
+
+impl_reductor_for_reductors!([R1, 0], [R2, 1]);
+impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2]);
+impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2], [R4, 3]);
+impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2], [R4, 3], [R5, 4]);
