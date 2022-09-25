@@ -23,6 +23,10 @@ impl<A> Reductor<A> for Count {
     }
 }
 
+/// Reductor that counts the number of items yielded by an iterator (similarly to [`Iterator::count`]),
+/// but results in an `Option<NonZeroUsize>` (unlike [`Count`] which results in a `usize`), with a `None`
+/// being returned for empty iterators.
+///
 /// ```rust
 /// use std::num::NonZeroUsize;
 ///
