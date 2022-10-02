@@ -10,7 +10,7 @@ mod product;
 pub use self::product::Product;
 
 mod min_max;
-pub use self::min_max::{Max, MaxF32, MaxF64, Min, MinF32, MinF64, MinMax, MinMaxF32, MinMaxF64};
+pub use self::min_max::{Max, MaxF, Min, MinF, MinMax, MinMaxF};
 
 mod mean;
 pub use self::mean::Mean;
