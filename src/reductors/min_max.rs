@@ -6,7 +6,7 @@ use std::{
 use super::state::NonEmptyState;
 use crate::{Reductor, Reductors};
 
-macro_rules! impl_min_max_inner {
+macro_rules! impl_min_max {
     ($inner:ident, $cmp:path) => {
         type State = NonEmptyState<$inner>;
 
@@ -27,130 +27,121 @@ macro_rules! impl_min_max_inner {
     };
 }
 
-macro_rules! impl_min_max {
-    ($type:ident, $cmp:path, $doc:expr) => {
-        #[doc = $doc]
-        #[repr(transparent)]
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        pub struct $type<T>(pub T);
+macro_rules! impl_min_max_option {
+    ($inner:ident, $cmp:path) => {
+        type State = NonEmptyState<Option<$inner>>;
 
-        impl<T> Reductor<T> for $type<T>
-        where
-            T: Ord,
-        {
-            impl_min_max_inner!(T, $cmp);
+        #[inline]
+        fn new(v: $inner) -> Self::State {
+            NonEmptyState(Some(v))
         }
 
-        impl<T> Reductor<T> for $type<Option<T>>
-        where
-            T: Ord,
-        {
-            type State = NonEmptyState<Option<T>>;
-
-            #[inline]
-            fn new(v: T) -> Self::State {
-                NonEmptyState(Some(v))
+        #[inline]
+        fn reduce(state: Self::State, item: $inner) -> Self::State {
+            match state.0 {
+                Some(state) => NonEmptyState(Some($cmp(state, item))),
+                None => Self::new(item),
             }
+        }
 
-            #[inline]
-            fn reduce(state: Self::State, item: T) -> Self::State {
-                match state.0 {
-                    Some(state) => NonEmptyState(Some($cmp(state, item))),
-                    None => Self::new(item),
-                }
-            }
-
-            #[inline]
-            fn into_result(state: Self::State) -> Self {
-                Self(state.0)
-            }
+        #[inline]
+        fn into_result(state: Self::State) -> Self {
+            Self(state.0)
         }
     };
 }
 
-macro_rules! min_max_doc_inner {
-    ($value:expr, $parens:expr) => {
-        concat!(
-            "Reductor that retains ",
-            $value,
-            " value yielded by iterator (",
-            $parens,
-            ")."
-        )
-    };
+/// Reductor that retains the minimum value yielded by an iterator (similarly to [`Iterator::min`]).
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Min<T>(pub T);
+
+impl<T> Reductor<T> for Min<T>
+where
+    T: Ord,
+{
+    impl_min_max!(T, cmp::min);
 }
 
-macro_rules! min_max_doc {
-    ($value:expr, $cmp:ident) => {
-        min_max_doc_inner!(
-            $value,
-            concat!("similarly to [`Iterator::", stringify!($cmp), "`]")
-        )
-    };
+impl<T> Reductor<T> for Min<Option<T>>
+where
+    T: Ord,
+{
+    impl_min_max_option!(T, cmp::min);
 }
 
-impl_min_max!(Min, cmp::min, min_max_doc!("minimum", min));
-impl_min_max!(Max, cmp::max, min_max_doc!("maximum", max));
+/// Reductor that retains the maximum value yielded by an iterator (similarly to [`Iterator::max`]).
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Max<T>(pub T);
 
-macro_rules! impl_float_min_max_inner {
-    ($type:ident, $float:ident, $cmp:ident, $doc:expr) => {
-        #[doc = $doc]
-        #[repr(transparent)]
-        #[derive(Debug, Clone, Copy, PartialEq)]
-        pub struct $type(pub $float);
-
-        impl Reductor<$float> for $type {
-            impl_min_max_inner!($float, $float::$cmp);
-        }
-    };
+impl<T> Reductor<T> for Max<T>
+where
+    T: Ord,
+{
+    impl_min_max!(T, cmp::max);
 }
 
-macro_rules! float_min_max_doc {
-    ($type:ident, $value:expr, $cmp:ident) => {
-        min_max_doc_inner!(
-            $value,
-            concat!(
-                "using [`",
-                stringify!($type),
-                "::",
-                stringify!($cmp),
-                "`] under the hood"
-            )
-        )
-    };
+impl<T> Reductor<T> for Max<Option<T>>
+where
+    T: Ord,
+{
+    impl_min_max_option!(T, cmp::max);
 }
 
-macro_rules! impl_float_min_max {
-    (
-        $type:ident,
-        Min: $min_type:ident,
-        Max: $max_type:ident
-    ) => {
-        impl_float_min_max_inner!(
-            $min_type,
-            $type,
-            min,
-            float_min_max_doc!($type, "minimum", min)
-        );
-        impl_float_min_max_inner!(
-            $max_type,
-            $type,
-            max,
-            float_min_max_doc!($type, "maximum", max)
-        );
-    };
+/// Reductor that retains the maximum float value yielded by an iterator (similarly to [`Iterator::max`],
+/// but using [`f64::max`] or [`f32::max`] under the hood).
+#[repr(transparent)]
+#[allow(clippy::derive_partial_eq_without_eq)] // `F` never impls `Eq`
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct MaxF<F>(pub F);
+
+impl Reductor<f32> for MaxF<f32> {
+    impl_min_max!(f32, f32::max);
 }
 
-impl_float_min_max!(f32, Min: MinF32, Max: MaxF32);
-impl_float_min_max!(f64, Min: MinF64, Max: MaxF64);
+impl Reductor<f32> for MaxF<Option<f32>> {
+    impl_min_max_option!(f32, f32::max);
+}
+
+impl Reductor<f64> for MaxF<f64> {
+    impl_min_max!(f64, f64::max);
+}
+
+impl Reductor<f64> for MaxF<Option<f64>> {
+    impl_min_max_option!(f64, f64::max);
+}
+
+/// Reductor that retains the minimum float value yielded by an iterator (similarly to [`Iterator::min`],
+/// but using [`f64::min`] or [`f32::min`] under the hood).
+#[repr(transparent)]
+#[allow(clippy::derive_partial_eq_without_eq)] // `F` never impls `Eq`
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct MinF<F>(pub F);
+
+impl Reductor<f32> for MinF<f32> {
+    impl_min_max!(f32, f32::min);
+}
+
+impl Reductor<f32> for MinF<Option<f32>> {
+    impl_min_max_option!(f32, f32::min);
+}
+
+impl Reductor<f64> for MinF<f64> {
+    impl_min_max!(f64, f64::min);
+}
+
+impl Reductor<f64> for MinF<Option<f64>> {
+    impl_min_max_option!(f64, f64::min);
+}
 
 macro_rules! minmax_impl_reductor {
-    ($type:ident, Min: $min:ident, Max: $max:ident $(, <$generic:ident>)?) => {
+    ($type:ident, Min: $min:ident, Max: $max:ident) => {
         minmax_impl_reductor!(
             $type,
             Min: $min,
             Max: $max,
-            Pair: Reductors<($min$(<$generic>)?, $max$(<$generic>)?)>
+            Pair: Reductors<($min<$type>, $max<$type>)>
         );
     };
     ($type:ident, Min: $min:ident, Max: $max:ident, Pair: $pair_type:ty) => {
@@ -165,14 +156,15 @@ macro_rules! minmax_impl_reductor {
         }
 
         fn into_result(state: Self::State) -> Self {
-            let Reductors(($min(min), $max(max))) = <$pair_type as Reductor<$type>>::into_result(state);
+            let Reductors(($min(min), $max(max))) =
+                <$pair_type as Reductor<$type>>::into_result(state);
 
             Self { min, max }
         }
     };
 }
 
-/// Reductor that retains both the minimum and maximum values yielded by iterator.
+/// Reductor that retains both the minimum and the maximum values yielded by an iterator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MinMax<T> {
     /// Minimum value yielded by iterator.
@@ -185,31 +177,24 @@ impl<A> Reductor<A> for MinMax<A>
 where
     A: Clone + Ord,
 {
-    minmax_impl_reductor!(A, Min: Min, Max: Max, <A>);
+    minmax_impl_reductor!(A, Min: Min, Max: Max);
 }
 
-/// Reductor that retains both the minimum and maximum values yielded by iterator over [`f32`]s (using [`f32::min`] and [`f32::max`] under the hood).
+/// Reductor that retains both the minimum and the maximum float values yielded by an iterator
+/// (using [`f64::min`] and [`f64::max`], or [`f32::min`] and [`f32::max`] under the hood).
+#[allow(clippy::derive_partial_eq_without_eq)] // `F` never impls `Eq`
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MinMaxF32 {
+pub struct MinMaxF<F> {
     /// Minimum value yielded by iterator.
-    pub min: f32,
+    pub min: F,
     /// Maximum value yielded by iterator.
-    pub max: f32,
+    pub max: F,
 }
 
-impl Reductor<f32> for MinMaxF32 {
-    minmax_impl_reductor!(f32, Min: MinF32, Max: MaxF32);
+impl Reductor<f32> for MinMaxF<f32> {
+    minmax_impl_reductor!(f32, Min: MinF, Max: MaxF);
 }
 
-/// Reductor that retains both the minimum and maximum values yielded by iterator over [`f64`]s (using [`f64::min`] and [`f64::max`] under the hood).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MinMaxF64 {
-    /// Minimum value yielded by iterator.
-    pub min: f64,
-    /// Maximum value yielded by iterator.
-    pub max: f64,
-}
-
-impl Reductor<f64> for MinMaxF64 {
-    minmax_impl_reductor!(f64, Min: MinF64, Max: MaxF64);
+impl Reductor<f64> for MinMaxF<f64> {
+    minmax_impl_reductor!(f64, Min: MinF, Max: MaxF);
 }
