@@ -3,36 +3,21 @@ use std::{
     cmp::{self, Ord},
 };
 
+use super::state::NonEmptyState;
 use crate::{Reductor, Reductors};
-
-/// Wrapper around `T` that pointedly does NOT implement [`Default`], even though `T` might.
-#[derive(Debug, Clone, Copy)]
-pub struct State<T>(T);
-
-impl<T> From<T> for State<T> {
-    fn from(v: T) -> Self {
-        Self(v)
-    }
-}
-
-impl<T> Default for State<Option<T>> {
-    fn default() -> Self {
-        Self(None)
-    }
-}
 
 macro_rules! impl_min_max_inner {
     ($inner:ident, $cmp:path) => {
-        type State = State<$inner>;
+        type State = NonEmptyState<$inner>;
 
         #[inline]
         fn new(v: $inner) -> Self::State {
-            State(v)
+            NonEmptyState(v)
         }
 
         #[inline]
         fn reduce(state: Self::State, item: $inner) -> Self::State {
-            State($cmp(state.0, item))
+            NonEmptyState($cmp(state.0, item))
         }
 
         #[inline]
@@ -60,17 +45,17 @@ macro_rules! impl_min_max {
         where
             T: Ord,
         {
-            type State = State<Option<T>>;
+            type State = NonEmptyState<Option<T>>;
 
             #[inline]
             fn new(v: T) -> Self::State {
-                State(Some(v))
+                NonEmptyState(Some(v))
             }
 
             #[inline]
             fn reduce(state: Self::State, item: T) -> Self::State {
                 match state.0 {
-                    Some(state) => State(Some($cmp(state, item))),
+                    Some(state) => NonEmptyState(Some($cmp(state, item))),
                     None => Self::new(item),
                 }
             }
