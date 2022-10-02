@@ -187,9 +187,12 @@ macro_rules! minmax_impl_reductor {
     };
 }
 
+/// Reductor that retains both the minimum and maximum values yielded by iterator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MinMax<T> {
+    /// Minimum value yielded by iterator.
     pub min: T,
+    /// Maximum value yielded by iterator.
     pub max: T,
 }
 
@@ -200,9 +203,12 @@ where
     minmax_impl_reductor!(A, Min: Min, Max: Max, <A>);
 }
 
+/// Reductor that retains both the minimum and maximum values yielded by iterator over [`f32`]s (using [`f32::min`] and [`f32::max`] under the hood).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MinMaxF32 {
+    /// Minimum value yielded by iterator.
     pub min: f32,
+    /// Maximum value yielded by iterator.
     pub max: f32,
 }
 
@@ -210,9 +216,12 @@ impl Reductor<f32> for MinMaxF32 {
     minmax_impl_reductor!(f32, Min: MinF32, Max: MaxF32);
 }
 
+/// Reductor that retains both the minimum and maximum values yielded by iterator over [`f64`]s (using [`f64::min`] and [`f64::max`] under the hood).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MinMaxF64 {
+    /// Minimum value yielded by iterator.
     pub min: f64,
+    /// Maximum value yielded by iterator.
     pub max: f64,
 }
 

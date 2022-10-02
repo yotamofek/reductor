@@ -96,93 +96,91 @@ where
     }
 }
 
-macro_rules! impl_reductor_for_tuple {
-    ($(#[$meta:meta])* $([$A:ident: $R:ident, $Idx:tt]),+$(,)?) => {
-        $(#[$meta])*
-        impl<$($A),+, $($R),+> Reductor<($($A),+)> for ($($R),+)
-        where
-            $($R: Reductor<$A>),+
-        {
-            type State = ($($R::State),+);
-
-            fn new(item: ($($A),+)) -> Self::State {
-                ($($R::new(item.$Idx)),+)
-            }
-
-            fn reduce(state: Self::State, item: ($($A),+)) -> Self::State {
-                ($($R::reduce(state.$Idx, item.$Idx)),+)
-            }
-
-            fn into_result(state: Self::State) -> Self {
-                ($($R::into_result(state.$Idx)),+)
-            }
-        }
-    };
-}
-
-impl_reductor_for_tuple!(
-    /// Two `Reductor`s can be combined in a tuple to reduce iterators that yield two-element tuples.
-    ///
-    /// ```rust
-    /// use reductor::{Reduce, Sum, Product};
-    ///
-    /// let iter = (5..10).map(|x| (x, -(x as i64)));
-    ///
-    /// let (Sum(sum), Product(product)) = iter
-    ///     .clone()
-    ///     .reduce_with::<(Sum<u64>, Product<i64>)>();
-    ///
-    /// assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
-    /// assert_eq!(product, iter.clone().map(|(.., x)| x).product())
-    /// ```
-    ///
-    /// See [`Reductors`] for reducing a single-item tuple with multiple `Reductor`s.
-    [A1: R1, 0],
-    [A2: R2, 1],
-);
-
-impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2]);
-impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2], [A4: R4, 3]);
-impl_reductor_for_tuple!(
-    [A1: R1, 0],
-    [A2: R2, 1],
-    [A3: R3, 2],
-    [A4: R4, 3],
-    [A5: R5, 4]
-);
-
 /// This struct can be used to run a tuple of [`Reductor`]s on a single value,
 /// by [cloning](`Clone`) every element yielded, and updating all `Reductor`s'
 /// states in each iteration.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Reductors<R>(pub R);
 
-macro_rules! impl_reductor_for_reductors {
-    ($(#[$meta:meta])* $([$R:ident, $Idx:tt]),+$(,)?) => {
-        $(#[$meta])*
-        impl<A, $($R),+> Reductor<A> for Reductors<($($R),+)>
-        where
-            A: Clone,
-            $($R: Reductor<A>),+
-        {
-            type State = ($($R::State),+);
+#[rustfmt::skip]
+mod agg_impls {
+    use super::*;
 
-            fn new(item: A) -> Self::State {
-                ($($R::new(item.clone())),+)
-            }
+    macro_rules! impl_reductor_for_tuple {
+        ($(#[$meta:meta])* $([$A:ident: $R:ident, $Idx:tt]),+$(,)?) => {
+            $(#[$meta])*
+            impl<$($A),+, $($R),+> Reductor<($($A),+)> for ($($R),+)
+            where
+                $($R: Reductor<$A>),+
+            {
+                type State = ($($R::State),+);
 
-            fn reduce(state: Self::State, item: A) -> Self::State {
-                ($($R::reduce(state.$Idx, item.clone())),+)
-            }
+                fn new(item: ($($A),+)) -> Self::State {
+                    ($($R::new(item.$Idx)),+)
+                }
 
-            fn into_result(state: Self::State) -> Self {
-                Self(($($R::into_result(state.$Idx)),+))
+                fn reduce(state: Self::State, item: ($($A),+)) -> Self::State {
+                    ($($R::reduce(state.$Idx, item.$Idx)),+)
+                }
+
+                fn into_result(state: Self::State) -> Self {
+                    ($($R::into_result(state.$Idx)),+)
+                }
             }
-        }
-    };
+        };
+    }
+
+    impl_reductor_for_tuple!(
+        /// Two `Reductor`s can be combined in a tuple to reduce iterators that yield two-element tuples.
+        ///
+        /// ```rust
+        /// use reductor::{Reduce, Sum, Product};
+        ///
+        /// let iter = (5..10).map(|x| (x, -(x as i64)));
+        ///
+        /// let (Sum(sum), Product(product)) = iter
+        ///     .clone()
+        ///     .reduce_with::<(Sum<u64>, Product<i64>)>();
+        ///
+        /// assert_eq!(sum, iter.clone().map(|(x, ..)| x).sum());
+        /// assert_eq!(product, iter.clone().map(|(.., x)| x).product())
+        /// ```
+        ///
+        /// See [`Reductors`] for reducing a single-item tuple with multiple `Reductor`s.
+        [A1: R1, 0], [A2: R2, 1],
+    );
+
+    impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2]);
+    impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2], [A4: R4, 3]);
+    impl_reductor_for_tuple!([A1: R1, 0], [A2: R2, 1], [A3: R3, 2], [A4: R4, 3], [A5: R5, 4]);
+
+    macro_rules! impl_reductor_for_reductors {
+        ($(#[$meta:meta])* $([$R:ident, $Idx:tt]),+$(,)?) => {
+            $(#[$meta])*
+            impl<A, $($R),+> Reductor<A> for Reductors<($($R),+)>
+            where
+                A: Clone,
+                $($R: Reductor<A>),+
+            {
+                type State = ($($R::State),+);
+
+                fn new(item: A) -> Self::State {
+                    ($($R::new(item.clone())),+)
+                }
+
+                fn reduce(state: Self::State, item: A) -> Self::State {
+                    ($($R::reduce(state.$Idx, item.clone())),+)
+                }
+
+                fn into_result(state: Self::State) -> Self {
+                    Self(($($R::into_result(state.$Idx)),+))
+                }
+            }
+        };
+    }
+
+    impl_reductor_for_reductors!([R1, 0], [R2, 1]);
+    impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2]);
+    impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2], [R4, 3]);
+    impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2], [R4, 3], [R5, 4]);
 }
-
-impl_reductor_for_reductors!([R1, 0], [R2, 1]);
-impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2]);
-impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2], [R4, 3]);
-impl_reductor_for_reductors!([R1, 0], [R2, 1], [R3, 2], [R4, 3], [R5, 4]);
