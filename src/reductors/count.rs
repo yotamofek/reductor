@@ -1,4 +1,4 @@
-use std::{convert::TryInto, num::NonZeroUsize};
+use std::num::NonZeroUsize;
 
 use crate::Reductor;
 
