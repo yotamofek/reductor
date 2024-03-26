@@ -147,14 +147,17 @@ macro_rules! impl_minmax {
     ($type:ident, Min: $min:ident, Max: $max:ident, Pair: $pair_type:ty) => {
         type State = <$pair_type as Reductor<$type>>::State;
 
+        #[inline]
         fn new(item: $type) -> Self::State {
             <$pair_type as Reductor<$type>>::new(item)
         }
 
+        #[inline]
         fn reduce(state: Self::State, item: $type) -> Self::State {
             <$pair_type as Reductor<$type>>::reduce(state, item)
         }
 
+        #[inline]
         fn into_result(state: Self::State) -> Self {
             let Reductors(($min(min), $max(max))) =
                 <$pair_type as Reductor<$type>>::into_result(state);
@@ -176,14 +179,17 @@ macro_rules! impl_minmax_option {
     ($type:ident, Min: $min:ident, Max: $max:ident, Pair: $pair_type:ty) => {
         type State = <$pair_type as Reductor<$type>>::State;
 
+        #[inline]
         fn new(item: $type) -> Self::State {
             <$pair_type as Reductor<$type>>::new(item)
         }
 
+        #[inline]
         fn reduce(state: Self::State, item: $type) -> Self::State {
             <$pair_type as Reductor<$type>>::reduce(state, item)
         }
 
+        #[inline]
         fn into_result(state: Self::State) -> Self {
             let Reductors(($min(min), $max(max))) =
                 <$pair_type as Reductor<$type>>::into_result(state);
