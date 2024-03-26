@@ -135,13 +135,42 @@ impl Reductor<f64> for MinF<Option<f64>> {
     impl_min_max_option!(f64, f64::min);
 }
 
-macro_rules! minmax_impl_reductor {
+macro_rules! impl_minmax {
     ($type:ident, Min: $min:ident, Max: $max:ident) => {
-        minmax_impl_reductor!(
+        impl_minmax!(
             $type,
             Min: $min,
             Max: $max,
             Pair: Reductors<($min<$type>, $max<$type>)>
+        );
+    };
+    ($type:ident, Min: $min:ident, Max: $max:ident, Pair: $pair_type:ty) => {
+        type State = <$pair_type as Reductor<$type>>::State;
+
+        fn new(item: $type) -> Self::State {
+            <$pair_type as Reductor<$type>>::new(item)
+        }
+
+        fn reduce(state: Self::State, item: $type) -> Self::State {
+            <$pair_type as Reductor<$type>>::reduce(state, item)
+        }
+
+        fn into_result(state: Self::State) -> Self {
+            let Reductors(($min(min), $max(max))) =
+                <$pair_type as Reductor<$type>>::into_result(state);
+
+            Self { min, max }
+        }
+    };
+}
+
+macro_rules! impl_minmax_option {
+    ($type:ident, Min: $min:ident, Max: $max:ident) => {
+        impl_minmax_option!(
+            $type,
+            Min: $min,
+            Max: $max,
+            Pair: Reductors<($min<Option<$type>>, $max<Option<$type>>)>
         );
     };
     ($type:ident, Min: $min:ident, Max: $max:ident, Pair: $pair_type:ty) => {
@@ -177,7 +206,14 @@ impl<A> Reductor<A> for MinMax<A>
 where
     A: Clone + Ord,
 {
-    minmax_impl_reductor!(A, Min: Min, Max: Max);
+    impl_minmax!(A, Min: Min, Max: Max);
+}
+
+impl<A> Reductor<A> for MinMax<Option<A>>
+where
+    A: Clone + Ord,
+{
+    impl_minmax_option!(A, Min: Min, Max: Max);
 }
 
 /// Reductor that retains both the minimum and the maximum float values yielded by an iterator
@@ -192,9 +228,17 @@ pub struct MinMaxF<F> {
 }
 
 impl Reductor<f32> for MinMaxF<f32> {
-    minmax_impl_reductor!(f32, Min: MinF, Max: MaxF);
+    impl_minmax!(f32, Min: MinF, Max: MaxF);
+}
+
+impl Reductor<f32> for MinMaxF<Option<f32>> {
+    impl_minmax_option!(f32, Min: MinF, Max: MaxF);
 }
 
 impl Reductor<f64> for MinMaxF<f64> {
-    minmax_impl_reductor!(f64, Min: MinF, Max: MaxF);
+    impl_minmax!(f64, Min: MinF, Max: MaxF);
+}
+
+impl Reductor<f64> for MinMaxF<Option<f64>> {
+    impl_minmax_option!(f64, Min: MinF, Max: MaxF);
 }
