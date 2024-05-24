@@ -54,7 +54,7 @@ fn process_samples(
         .iter()
         .zip(scale)
         .map(|(sample, scale)| sample * scale)
-        .filter(|&scaled| scaled <= upper_limit)
+        .filter(|&scaled| scaled > upper_limit)
         .reduce_with();
 
     // ...
